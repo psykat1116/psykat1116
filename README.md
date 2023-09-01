@@ -1,3 +1,4 @@
+<img align="center" alt="background" src="https://github.com/psykat1116/psykat1116/blob/main/background.png">
 <h1 align="center">Hi Viewers 👋, I'm Saikat Samanta</h1>
 <h3 align="center">A passionate fullstack developer from India</h3>
 
