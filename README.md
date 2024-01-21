@@ -33,3 +33,5 @@
 <p>&nbsp;<img align="center" src="https://github-readme-stats.vercel.app/api?username=psykat1116&show_icons=true&locale=en" alt="psykat1116" /></p>
 
 <p><img align="center" src="https://github-readme-streak-stats.herokuapp.com/?user=psykat1116&" alt="psykat1116" /></p>
+
+[![An image of @psykat1116's Holopin badges, which is a link to view their full Holopin profile](https://holopin.me/psykat1116)](https://holopin.io/@psykat1116)
