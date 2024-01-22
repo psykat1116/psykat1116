@@ -8,7 +8,7 @@
 
 <p align="left"> <a href="https://github.com/ryo-ma/github-profile-trophy"><img src="https://github-profile-trophy.vercel.app/?username=psykat1116" alt="psykat1116" /></a> </p>
 
-- 🌱 I’m currently learning **Typescript, NextJS**
+- 🌱 I’m currently learning **Socket.io**
 
 - 📫 How to reach me **ss2519@it.jgec.ac.in**
 
