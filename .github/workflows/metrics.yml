@@ -1,36 +1,98 @@
-name: Metrics
+name: Metric
 
 on:
   workflow_dispatch:
   schedule:
-    # Runs once a day at midnight UTC — change the cron if you want it more/less often
-    - cron: "0 0 * * *"
-  push:
-    branches: ["main"]
+    - cron: "0 0 * * *" # once a day
+
+permissions:
+  contents: write
 
 jobs:
-  github-metrics:
+  update-readme:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      # Card 1: stats overview, saved as github-metrics.svg — dark "terminal" theme
-      - name: Generate stats card
-        uses: lowlighter/metrics@latest
+      - uses: actions/checkout@v4
+
+      - name: Fetch stats & rewrite README section
+        uses: actions/github-script@v7
         with:
-          filename: github-metrics.svg
-          token: ${{ secrets.METRICS_TOKEN }}
-          template: terminal
-          base: header, activity, community, repositories, metadata
-      - name: Generate languages card
-        uses: lowlighter/metrics@latest
+          script: |
+            const fs = require('fs');
+            const login = context.repo.owner;
+
+            // ---- 1. Fetch the raw data from GitHub's GraphQL API ----
+            const query = `
+              query($login: String!) {
+                user(login: $login) {
+                  followers { totalCount }
+                  repositories(first: 100, ownerAffiliations: OWNER, isFork: false, privacy: PUBLIC) {
+                    totalCount
+                    nodes { stargazerCount primaryLanguage { name color } }
+                  }
+                  contributionsCollection {
+                    totalCommitContributions
+                    totalPullRequestContributions
+                    totalIssueContributions
+                  }
+                }
+              }
+            `;
+            const { user } = await github.graphql(query, { login });
+
+            const totalStars = user.repositories.nodes.reduce((sum, r) => sum + r.stargazerCount, 0);
+            const totalRepos = user.repositories.totalCount;
+            const followers  = user.followers.totalCount;
+            const commits    = user.contributionsCollection.totalCommitContributions;
+            const prs        = user.contributionsCollection.totalPullRequestContributions;
+            const issues     = user.contributionsCollection.totalIssueContributions;
+
+            // Tally primary languages across repos
+            const langCounts = {};
+            const langColors = {};
+            for (const repo of user.repositories.nodes) {
+              const lang = repo.primaryLanguage;
+              if (!lang) continue;
+              langCounts[lang.name] = (langCounts[lang.name] || 0) + 1;
+              langColors[lang.name] = (lang.color || '999999').replace('#', '');
+            }
+            const topLanguages = Object.entries(langCounts)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 5);
+
+            // ---- 2. Build the markdown YOU control the look of ----
+            // Edit labels/colors/emoji/layout here however you like —
+            // this is plain shields.io badge markdown, not a rendered image.
+            const badge = (label, value, color) =>
+              `<img src="https://img.shields.io/badge/${encodeURIComponent(label)}-${encodeURIComponent(value)}-${color}?style=flat-square&labelColor=1a1b27" alt="${label}"/>`;
+
+            const statBadges = [
+              badge('Commits (past year)', commits, '6366F1'),
+              badge('Stars', totalStars, 'FFD700'),
+              badge('Followers', followers, '06B6D4'),
+              badge('Public Repos', totalRepos, '8B5CF6'),
+              badge('PRs', prs, '2EC866'),
+              badge('Issues', issues, 'F97316'),
+            ].join(' ');
+
+            const languageBadges = topLanguages
+              .map(([name, count]) => badge(name, `${count} repos`, langColors[name]))
+              .join(' ');
+
+            const block = [
+              '<p align="center">', statBadges, '</p>',
+              '<p align="center">', languageBadges, '</p>',
+            ].join('\n');
+
+            // ---- 3. Splice it into README.md between the markers ----
+            const start = '<!--STATS:START-->';
+            const end = '<!--STATS:END-->';
+            const readme = fs.readFileSync('README.md', 'utf8');
+            const re = new RegExp(`${start}[\\s\\S]*?${end}`);
+            const updated = readme.replace(re, `${start}\n${block}\n${end}`);
+            fs.writeFileSync('README.md', updated);
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          filename: github-languages.svg
-          token: ${{ secrets.METRICS_TOKEN }}
-          template: terminal
-          base: ""
-          plugin_languages: yes
-          plugin_languages_categories: markup, programming
-          plugin_languages_recent_categories: markup, programming
-          plugin_languages_recent_days: 14
-          plugin_languages_threshold: 0%
+          commit_message: "chore: update README stats"
+          file_pattern: "README.md"
