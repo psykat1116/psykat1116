@@ -1,0 +1,41 @@
+name: Metrics
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs once a day at midnight UTC — change the cron if you want it more/less often
+    - cron: "0 0 * * *"
+  push:
+    branches: ["main"]
+
+jobs:
+  github-metrics:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Card 1: stats + top languages, saved as github-metrics.svg
+      - name: Generate stats & languages card
+        uses: lowlighter/metrics@latest
+        with:
+          filename: github-metrics.svg
+          token: ${{ secrets.METRICS_TOKEN }}
+          template: classic
+          base: header, activity, community, repositories, metadata
+          plugin_languages: yes
+          plugin_languages_categories: markup, programming
+          plugin_languages_recent_categories: markup, programming
+          plugin_languages_recent_days: 14
+          plugin_languages_threshold: 0%
+
+      # Card 2: achievement badges (replaces the old trophy widget), saved as github-achievements.svg
+      - name: Generate achievements card
+        uses: lowlighter/metrics@latest
+        with:
+          filename: github-achievements.svg
+          token: ${{ secrets.METRICS_TOKEN }}
+          base: ""
+          plugin_achievements: yes
+          plugin_achievements_display: detailed
+          plugin_achievements_limit: 6
+          plugin_achievements_threshold: C
